@@ -1,5 +1,4 @@
 BFCTL ?= bfctl
-PORT_ARG := $(if $(PORT),-port $(PORT),)
 
 .PHONY: help backup info ports diff
 
@@ -9,18 +8,16 @@ help:
 ports: ## List connected Betaflight FCs
 	@$(BFCTL) ports
 
-info: ## Print connected FC's metadata (PORT=... optional)
-	@$(BFCTL) info $(PORT_ARG)
+info: ## Print connected FC's metadata
+	@$(BFCTL) info
 
-backup: ## Pull config into <craft>.txt (PORT=... optional)
-	@dump=$$($(BFCTL) dump $(PORT_ARG)); \
-	craft=$$(echo "$$dump" | awk -F': *' '/^# name:/ { print tolower($$2); exit }'); \
-	test -n "$$craft" || { echo "no craft name found in dump (set 'name' in Configurator)"; exit 1; }; \
-	echo "$$dump" > "$$craft.txt"; \
+backup: ## Pull config from connected FC into <craft>.txt
+	@craft=$$($(BFCTL) info -json | jq -r '.craft_name' | tr '[:upper:]' '[:lower:]'); \
+	test -n "$$craft" -a "$$craft" != "null" || { echo "no craft name found (set 'name' in Configurator)"; exit 1; }; \
+	$(BFCTL) dump > "$$craft.txt"; \
 	echo "wrote $$craft.txt"
 
-diff: ## Diff connected FC vs. its tracked file (PORT=... optional)
-	@dump=$$($(BFCTL) dump $(PORT_ARG)); \
-	craft=$$(echo "$$dump" | awk -F': *' '/^# name:/ { print tolower($$2); exit }'); \
+diff: ## Diff connected FC vs. its tracked file
+	@craft=$$($(BFCTL) info -json | jq -r '.craft_name' | tr '[:upper:]' '[:lower:]'); \
 	test -f "$$craft.txt" || { echo "no tracked file for $$craft"; exit 1; }; \
-	echo "$$dump" | diff -u "$$craft.txt" - || true
+	$(BFCTL) dump | diff -u "$$craft.txt" - || true
