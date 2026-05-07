@@ -39,6 +39,7 @@ Optional, only when there's something to record:
 - One drone = one subdirectory under `drones/`, named after the lowercase craft name.
 - One commit per logical change, not per backup pull.
 - Don't commit a backup with no meaningful diff — review first.
+- When the user refers to "this FC" / "the FC" / "the drone" without naming one, default to the drone currently plugged in. Use `bfctl info` (or the craft name from a fresh `bfctl backup`) to identify it — don't ask which drone. If nothing is plugged in, then ask.
 
 ## Tests
 
