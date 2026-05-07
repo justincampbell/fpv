@@ -36,6 +36,7 @@ set pilot_name = Justin
 profile 0
 
 # profile 0
+set crash_recovery = ON
 set d_pitch = 59
 set d_roll = 52
 set p_yaw = 73
