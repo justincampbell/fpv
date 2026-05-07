@@ -64,6 +64,7 @@ set vbat_max_cell_voltage = 440
 set vbat_warning_cell_voltage = 345
 set vbat_scale = 113
 set ibata_offset = -600
+set bat_capacity = 480
 set yaw_motors_reversed = ON
 set small_angle = 180
 set pid_process_denom = 2
@@ -101,6 +102,7 @@ set vtx_channel = 4
 set vtx_power = 2
 set vtx_freq = 5800
 set craft_name = AIR75
+set pilot_name = Justin
 
 profile 0
 
