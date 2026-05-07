@@ -27,12 +27,14 @@ Optional, only when there's something to record:
 
 **Applying one change to all drones:** describe the change. Claude edits every relevant `drones/*/diff.txt` in one pass. Commit message should describe the *intent* ("raise vbat warning to 3.5V"), not the line-level diff.
 
-**Restoring a config to the FC:** `bfctl restore drones/<craft>/diff.txt` replays the file line-by-line (matches Configurator's pacing) and ends with `save`, which reboots the FC. Use `--no-save` to apply to RAM only, or `--dry-run` to preview the line stream. AT32 dumps that only carry `# name:` / `# pilot:` headers get the matching `set craft_name` / `set pilot_name` injected automatically.
+**Restoring a config to the FC:** `bfctl restore drones/<craft>/diff.txt` replays the file line-by-line (matches Configurator's pacing) and ends with `save`, which reboots the FC. Use `--no-save` to apply to RAM only, or `--dry-run` to preview the line stream. AT32 dumps that only carry `# name:` / `# pilot:` headers get the matching `set craft_name` / `set pilot_name` injected automatically. To clear an aux slot in the diff, set it to `aux N 0 0 900 900 0 0` — that's the FC's "unbound" form.
+
+**Verifying which AUX channel a radio switch sends to:** the Pocket (and other multi-protocol radios) can map the same physical switch to different AUX channels per model profile, so the FC's binding may not match what you think the radio is sending. To check live: have the user power the radio on, then `bfctl msp -from 105 -max 105` reads MSP_RC (32 bytes = 16 little-endian uint16 channels; channels 0–3 = AETR, 4+ = AUX1+). Read once at rest, ask the user to flip the switch, read again — the channel that changes is the one the radio is sending. Compare that to the FC's `aux` lines to confirm the binding. We've already been bitten by this on the Air75 beeper.
 
 ## Tools
 
 - `bfctl` — Go CLI for talking to the FC over USB. Auto-detects the port. `bfctl --help` for the full list of commands. **Gotcha:** `bfctl backup` enters CLI mode to issue `diff all` and leaves the FC there afterward; any subsequent MSP query (`bfctl msp …`) fails with "FC is in CLI mode" until the FC reboots (unplug/replug, or `bfctl exec exit` which itself reboots the FC). The Makefile's `backup` target avoids this by pulling MSP *before* the dump.
-- Web Betaflight Configurator at `app.betaflight.com` — fallback for restore and GUI tasks.
+- Web Betaflight Configurator at `app.betaflight.com` — fallback for restore and GUI tasks. **Gotcha:** Configurator holds the serial port for the duration of the connection; `bfctl` will fail with `Serial port busy` until you disconnect (or close the tab).
 
 ## Conventions
 
@@ -51,8 +53,11 @@ Each rule is a `.bats` file. The Makefile loops over the configs and invokes bat
 - `assert_set <key>` — fails if `set <key> = ...` is missing (any value)
 - `assert_set_equals <key> <value>` — fails unless the value matches exactly
 - `assert_line "<text>"` — fails if the literal line is missing (for non-`set` directives like `feature OSD`, `beacon RX_LOST`)
+- `refute_line "<text>"` — fails if the literal line *is* present. Use for "on by default" features where the diff would only emit a `feature -X` / `beacon -X` line when disabled.
 - `recommended_set <key>` — `skip` with a note when missing instead of failing; passes when set. Use for things like `vbat_scale` where there's no single correct value.
 - `craft` — returns the lowercase craft slug (e.g. `air65`), useful for per-drone branching inside a rule
+- `dump` — returns the path to the drone's `dump.txt`. Use in `aux` rules: `diff.txt` only contains lines that *differ* from the board defaults, so a board that ships ANGLE on AUX2 (e.g. LIONBEE_V1) won't have it in the diff at all. `dump.txt` always shows the full effective config.
+- `mode_id <name>` — returns the permanent mode ID for a name (e.g. `mode_id BEEPER` → `13`, `mode_id "FLIP OVER AFTER CRASH"` → `35`). Reads `msp.json`. Always use this in `aux` rules instead of hardcoding the integer — names are stable and self-documenting; permanent IDs aren't surfaced in Configurator.
 
 **Adding a rule:** drop a new `<thing>.bats` into `rules/`, `load _helper`, write one or more `@test` blocks. Keep the test name human-readable — it's what shows in the checklist.
 
