@@ -18,18 +18,29 @@ signature
 # name: LionBee3
 
 # aux
-aux 3 35 3 1700 2100 0 0
+aux 2 13 4 1500 2100 0 0
+aux 3 35 1 1300 1700 0 0
 aux 4 0 0 900 900 0 0
 
 # master
 set acc_calibration = -40,37,48,1
 set mag_align_yaw = 1800
 set align_board_yaw = 90
+set bat_capacity = 3000
+set vbat_warning_cell_voltage = 300
 set vtx_power = 3
 set vtx_freq = 5800
 set expresslrs_uid = 133,87,107,200,241,145
+set pilot_name = Justin
 
 profile 0
+
+# profile 0
+set d_pitch = 59
+set d_roll = 52
+set p_yaw = 73
+set i_yaw = 71
+set f_yaw = 124
 
 profile 1
 
