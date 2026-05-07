@@ -64,3 +64,26 @@ recommended_set() {
 craft() {
     basename "$(dirname "$CONFIG")"
 }
+
+# Path to the drone's dump.txt. Use for rules that need the FC's full
+# effective config — `aux` lines, defaults — that diff.txt omits when
+# they match the board defaults.
+dump() {
+    echo "$(dirname "$CONFIG")/dump.txt"
+}
+
+# Look up a mode's permanent ID by name (e.g. "ANGLE", "BEEPER",
+# "FLIP OVER AFTER CRASH"). Reads msp.json, mapping MSP_BOXNAMES (116)
+# slot order to MSP_BOXIDS (119) values. Use in `aux` rules instead of
+# hardcoding the integer ID — names are stable across firmware versions,
+# permanent IDs aren't necessarily exposed to the user.
+mode_id() {
+    local name="$1"
+    local msp="$(dirname "$CONFIG")/msp.json"
+    jq -r --arg n "$name" '
+        (.[] | select(.code == 116) | .decoded | split(", ")) as $names |
+        (.[] | select(.code == 119) | .decoded | split(" ") | map(tonumber)) as $ids |
+        ($names | index($n)) as $i |
+        if $i == null then "ERR" else $ids[$i] end
+    ' "$msp"
+}
