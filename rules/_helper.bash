@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Helpers for rule .bats files. The Makefile sets $CONFIG to the drone .txt
-# being checked, then runs bats once per drone.
+# Helpers for rule .bats files. The Makefile sets $CONFIG to the drone's
+# diff.txt being checked, then runs bats once per drone.
 
 # Print the value of `set <key> = ...`. Empty if not present.
 get_set() {
@@ -60,7 +60,7 @@ recommended_set() {
 }
 
 # Helper for writing per-drone or per-class logic inside a rule. Returns the
-# craft slug derived from the filename (e.g. air65, lionbee3).
+# craft slug derived from the parent directory (e.g. air65, lionbee3).
 craft() {
-    basename "$CONFIG" .txt
+    basename "$(dirname "$CONFIG")"
 }

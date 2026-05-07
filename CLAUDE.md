@@ -10,23 +10,24 @@ Tracks the Betaflight configuration of each of the user's drones in git so chang
 
 One subdirectory per drone under `drones/`, named after the lowercase `craft_name`:
 
-- `drones/<craft>/<craft>.txt` — full Betaflight CLI dump (`diff all` output).
-- `drones/<craft>/msp.json` — MSP snapshot of static info the dump doesn't carry (board/build identity, mode names ↔ permanent IDs, mode ranges as the FC sees them). Filtered to a fixed code list — see `MSP_CODES` in the `Makefile`. Use it to decode the `aux` lines in `<craft>.txt`: each `aux N <mode_id> <ch> <start_us> <end_us> <logic> <link>` references a permanent mode ID from `MSP_BOXIDS`, named by `MSP_BOXNAMES` at the same index. Channels are 0-indexed (`0=AUX1, 1=AUX2, …`). The dump's `aux` slots can drift from the FC's live state — if they look wrong, `make backup` resyncs both files.
+- `drones/<craft>/diff.txt` — Betaflight CLI `diff all` output (only non-default settings, replayable via `bfctl restore`).
+- `drones/<craft>/dump.txt` — Betaflight CLI `dump all` output (every setting, including defaults). Read-only reference; not used for restore.
+- `drones/<craft>/msp.json` — MSP snapshot of static info the dump doesn't carry (board/build identity, mode names ↔ permanent IDs, mode ranges as the FC sees them). Filtered to a fixed code list — see `MSP_CODES` in the `Makefile`. Use it to decode the `aux` lines in `dump.txt`: each `aux N <mode_id> <ch> <start_us> <end_us> <logic> <link>` references a permanent mode ID from `MSP_BOXIDS`, named by `MSP_BOXNAMES` at the same index. Channels are 0-indexed (`0=AUX1, 1=AUX2, …`). `diff.txt` only shows aux slots that differ from the board's defaults; `dump.txt` shows all 20.
 - `Makefile` — automation around `bfctl` and `bats`.
-- `rules/` — bats files that lint each `<craft>.txt`. See [Tests](#tests).
+- `rules/` — bats files that lint each `diff.txt`. See [Tests](#tests).
 
 Optional, only when there's something to record:
 - `drones/<craft>/<craft>.md` — build notes, hardware, rationale.
 
 ## Workflow
 
-**Backing up after a tuning change:** `make backup` pulls the connected FC's config to `drones/<craft>/<craft>.txt` and refreshes `drones/<craft>/msp.json`. Review the diff, commit if intentional. `make msp` refreshes just the MSP snapshot.
+**Backing up after a tuning change:** `make backup` pulls the connected FC into `drones/<craft>/`, writing `diff.txt`, `dump.txt`, and `msp.json`. Review the diff, commit if intentional. `make msp` refreshes just the MSP snapshot.
 
-**Editing a config with Claude's help:** ask Claude to modify `drones/<craft>/<craft>.txt` directly. The file is line-oriented and idempotent (`set key = value`, etc.), so Claude can read, propose, and edit in place.
+**Editing a config with Claude's help:** ask Claude to modify `drones/<craft>/diff.txt` directly. The file is line-oriented and idempotent (`set key = value`, etc.), so Claude can read, propose, and edit in place. `dump.txt` is the full reference (incl. defaults); don't hand-edit it — it's regenerated each backup.
 
-**Applying one change to all drones:** describe the change. Claude edits every relevant `drones/*/<craft>.txt` in one pass. Commit message should describe the *intent* ("raise vbat warning to 3.5V"), not the line-level diff.
+**Applying one change to all drones:** describe the change. Claude edits every relevant `drones/*/diff.txt` in one pass. Commit message should describe the *intent* ("raise vbat warning to 3.5V"), not the line-level diff.
 
-**Restoring a config to the FC:** `bfctl restore drones/<craft>/<craft>.txt` replays the file line-by-line (matches Configurator's pacing) and ends with `save`, which reboots the FC. Use `--no-save` to apply to RAM only, or `--dry-run` to preview the line stream. AT32 dumps that only carry `# name:` / `# pilot:` headers get the matching `set craft_name` / `set pilot_name` injected automatically.
+**Restoring a config to the FC:** `bfctl restore drones/<craft>/diff.txt` replays the file line-by-line (matches Configurator's pacing) and ends with `save`, which reboots the FC. Use `--no-save` to apply to RAM only, or `--dry-run` to preview the line stream. AT32 dumps that only carry `# name:` / `# pilot:` headers get the matching `set craft_name` / `set pilot_name` injected automatically.
 
 ## Tools
 
@@ -41,7 +42,7 @@ Optional, only when there's something to record:
 
 ## Tests
 
-`make test` runs every rule in `rules/` against every `<craft>.txt` and prints a per-drone checklist. Requires bats (`brew install bats-core`).
+`make test` runs every rule in `rules/` against every `diff.txt` and prints a per-drone checklist. Requires bats (`brew install bats-core`).
 
 Each rule is a `.bats` file. The Makefile loops over the configs and invokes bats once per drone with `CONFIG=<path>` set. Rules use `$CONFIG` to know which file they're checking; helpers in `rules/_helper.bash` make the common cases one-liners.
 
