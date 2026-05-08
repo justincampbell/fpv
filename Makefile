@@ -28,31 +28,24 @@ info: ## Print connected FC's metadata
 	@$(BFCTL) info
 
 backup: ## Pull MSP snapshot + diff + dump from connected FC into drones/<craft>/
-	@craft=$$($(BFCTL) info -json | jq -r '.craft_name' | tr '[:upper:]' '[:lower:]'); \
-	test -n "$$craft" -a "$$craft" != "null" || { echo "no craft name found (set 'name' in Configurator)"; exit 1; }; \
+	@craft=$$($(BFCTL) craft) || exit; \
 	dir="drones/$$craft"; \
 	mkdir -p "$$dir"; \
 	$(BFCTL) msp --json $(MSP_CODES) > "$$dir/msp.json"; \
 	echo "wrote $$dir/msp.json"; \
-	tmp=$$(mktemp -d); \
-	$(BFCTL) backup -out "$$tmp" >/dev/null; \
-	mv "$$tmp"/BTFL_cli_backup_*.txt "$$dir/diff.txt"; \
-	rmdir "$$tmp"; \
-	[ -z "$$(tail -c1 $$dir/diff.txt)" ] || printf '\n' >> "$$dir/diff.txt"; \
+	$(BFCTL) backup -out "$$dir/diff.txt" >/dev/null; \
 	echo "wrote $$dir/diff.txt"; \
 	$(BFCTL) dump > "$$dir/dump.txt"; \
-	[ -z "$$(tail -c1 $$dir/dump.txt)" ] || printf '\n' >> "$$dir/dump.txt"; \
 	echo "wrote $$dir/dump.txt"
 
 msp: ## Save selected MSP codes to drones/<craft>/msp.json
-	@craft=$$($(BFCTL) info -json | jq -r '.craft_name' | tr '[:upper:]' '[:lower:]'); \
-	test -n "$$craft" -a "$$craft" != "null" || { echo "no craft name found (set 'name' in Configurator)"; exit 1; }; \
+	@craft=$$($(BFCTL) craft) || exit; \
 	dir="drones/$$craft"; \
 	mkdir -p "$$dir"; \
 	$(BFCTL) msp --json $(MSP_CODES) > "$$dir/msp.json"; \
 	echo "wrote $$dir/msp.json"
 
 diff: ## Diff connected FC vs. its tracked file
-	@craft=$$($(BFCTL) info -json | jq -r '.craft_name' | tr '[:upper:]' '[:lower:]'); \
+	@craft=$$($(BFCTL) craft) || exit; \
 	test -f "drones/$$craft/diff.txt" || { echo "no tracked file for $$craft"; exit 1; }; \
 	$(BFCTL) diff | diff -u "drones/$$craft/diff.txt" - || true
