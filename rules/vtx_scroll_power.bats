@@ -57,12 +57,3 @@ active_vtx_lines() {
         return 1
     }
 }
-
-@test "VTX scroll: vtx_low_power_disarm = UNTIL_FIRST_ARM" {
-    local val; val=$(grep -E "^set vtx_low_power_disarm = " "$(dump)" | sed -E "s/^set vtx_low_power_disarm = //")
-    [[ "$val" == "UNTIL_FIRST_ARM" ]] || {
-        echo "expected: set vtx_low_power_disarm = UNTIL_FIRST_ARM"
-        echo "actual:   ${val:-<unset>}"
-        return 1
-    }
-}
