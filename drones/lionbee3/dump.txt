@@ -369,7 +369,7 @@ aux 0 0 0 1700 2100 0 0
 aux 1 1 1 900 1300 0 0
 aux 2 13 4 1500 2100 0 0
 aux 3 35 1 1300 1700 0 0
-aux 4 0 0 900 900 0 0
+aux 4 39 5 900 1200 0 0
 aux 5 0 0 900 900 0 0
 aux 6 0 0 900 900 0 0
 aux 7 0 0 900 900 0 0
@@ -437,9 +437,9 @@ vtxtable powervalues 0 1 2
 vtxtable powerlabels 25 100 MAX
 
 # vtx
-vtx 0 0 0 0 0 900 900
-vtx 1 0 0 0 0 900 900
-vtx 2 0 0 0 0 900 900
+vtx 0 5 0 0 1 1200 1500
+vtx 1 5 0 0 2 1500 1800
+vtx 2 5 0 0 3 1800 2100
 vtx 3 0 0 0 0 900 900
 vtx 4 0 0 0 0 900 900
 vtx 5 0 0 0 0 900 900
@@ -496,7 +496,7 @@ set acc_hardware = AUTO
 set acc_lpf_hz = 25
 set acc_trim_pitch = 0
 set acc_trim_roll = 0
-set acc_calibration = -40,37,48,1
+set acc_calibration = -28,-17,40,1
 set align_mag = CW180
 set mag_align_roll = 0
 set mag_align_pitch = 0
@@ -888,7 +888,7 @@ set pwr_on_arm_grace = 5
 set enable_stick_arming = OFF
 set vtx_band = 4
 set vtx_channel = 4
-set vtx_power = 3
+set vtx_power = 2
 set vtx_low_power_disarm = OFF
 set vtx_softserial_alt = OFF
 set vtx_freq = 5800
