@@ -34,6 +34,7 @@ set align_board_yaw = 90
 set bat_capacity = 3000
 set vbat_warning_cell_voltage = 300
 set vtx_power = 2
+set vtx_low_power_disarm = UNTIL_FIRST_ARM
 set vtx_freq = 5800
 set expresslrs_uid = 133,87,107,200,241,145
 set pilot_name = Justin
