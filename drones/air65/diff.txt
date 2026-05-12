@@ -47,6 +47,12 @@ vtxtable powerlevels 5
 vtxtable powervalues 1 2 3 4 0
 vtxtable powerlabels 25 100 200 400 PIT
 
+# vtx
+vtx 0 5 0 0 1 1000 1275
+vtx 1 5 0 0 2 1275 1550
+vtx 2 5 0 0 3 1550 1825
+vtx 3 5 0 0 4 1825 2100
+
 # master
 set gyro_lpf1_static_hz = 0
 set dyn_notch_count = 1
@@ -116,7 +122,7 @@ set osd_profile_name_pos = 12629
 set osd_total_flights_pos = 384
 set vtx_band = 4
 set vtx_channel = 4
-set vtx_power = 1
+set vtx_power = 2
 set vtx_low_power_disarm = UNTIL_FIRST_ARM
 set vtx_freq = 5800
 set craft_name = Air65

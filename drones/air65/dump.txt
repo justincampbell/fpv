@@ -302,10 +302,10 @@ vtxtable powervalues 1 2 3 4 0
 vtxtable powerlabels 25 100 200 400 PIT
 
 # vtx
-vtx 0 0 0 0 0 900 900
-vtx 1 0 0 0 0 900 900
-vtx 2 0 0 0 0 900 900
-vtx 3 0 0 0 0 900 900
+vtx 0 5 0 0 1 1000 1275
+vtx 1 5 0 0 2 1275 1550
+vtx 2 5 0 0 3 1550 1825
+vtx 3 5 0 0 4 1825 2100
 vtx 4 0 0 0 0 900 900
 vtx 5 0 0 0 0 900 900
 vtx 6 0 0 0 0 900 900
@@ -655,7 +655,7 @@ set pwr_on_arm_grace = 5
 set enable_stick_arming = OFF
 set vtx_band = 4
 set vtx_channel = 4
-set vtx_power = 1
+set vtx_power = 2
 set vtx_low_power_disarm = UNTIL_FIRST_ARM
 set vtx_softserial_alt = OFF
 set vtx_freq = 5800
