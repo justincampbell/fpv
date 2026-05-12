@@ -36,6 +36,10 @@ active_vtx_lines() {
     [[ -n "$lines" ]] || skip "depends on: VTX scroll: rules configured"
     local levels; levels=$(grep -E "^vtxtable powerlevels " "$(dump)" | awk '{print $3}')
     [[ -n "$levels" ]] || skip "vtxtable powerlevels not set"
+    # If the last powervalue is 0 (SmartAudio PIT), that level is bound via the
+    # VTX PIT MODE aux binding (verified by the next test), not a vtx rule.
+    local last_pv; last_pv=$(grep -E "^vtxtable powervalues " "$(dump)" | awk '{print $NF}')
+    [[ "$last_pv" == "0" ]] && levels=$((levels - 1))
     local powers; powers=$(echo "$lines" | sort -k7n | awk '{print $6}' | paste -sd ' ' -)
     local expected; expected=$(seq 1 "$levels" | paste -sd ' ' -)
     [[ "$powers" == "$expected" ]] || {
