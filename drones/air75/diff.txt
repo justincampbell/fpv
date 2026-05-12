@@ -31,6 +31,7 @@ aux 0 0 0 1700 2100 0 0
 aux 1 1 1 900 1300 0 0
 aux 2 35 1 1300 1700 0 0
 aux 3 13 4 1500 2100 0 0
+aux 4 39 5 900 1200 0 0
 
 # vtxtable
 vtxtable bands 6
@@ -44,6 +45,12 @@ vtxtable band 6 LOWRACE  L FACTORY 5362 5399 5436 5473 5510 5547 5584 5621
 vtxtable powerlevels 5
 vtxtable powervalues 1 2 3 4 0
 vtxtable powerlabels 25 100 200 400 PIT
+
+# vtx
+vtx 0 5 0 0 1 1200 1400
+vtx 1 5 0 0 2 1400 1600
+vtx 2 5 0 0 3 1600 1800
+vtx 3 5 0 0 4 1800 2100
 
 # master
 set gyro_lpf1_static_hz = 0
@@ -98,7 +105,8 @@ set osd_esc_rpm_pos = 150
 set osd_core_temp_pos = 278
 set vtx_band = 4
 set vtx_channel = 4
-set vtx_power = 2
+set vtx_power = 1
+set vtx_low_power_disarm = UNTIL_FIRST_ARM
 set vtx_freq = 5800
 set craft_name = AIR75
 set pilot_name = Justin

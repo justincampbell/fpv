@@ -335,7 +335,7 @@ aux 0 0 0 1700 2100 0 0
 aux 1 1 1 900 1300 0 0
 aux 2 35 1 1300 1700 0 0
 aux 3 13 4 1500 2100 0 0
-aux 4 0 0 900 900 0 0
+aux 4 39 5 900 1200 0 0
 aux 5 0 0 900 900 0 0
 aux 6 0 0 900 900 0 0
 aux 7 0 0 900 900 0 0
@@ -404,10 +404,10 @@ vtxtable powervalues 1 2 3 4 0
 vtxtable powerlabels 25 100 200 400 PIT
 
 # vtx
-vtx 0 0 0 0 0 900 900
-vtx 1 0 0 0 0 900 900
-vtx 2 0 0 0 0 900 900
-vtx 3 0 0 0 0 900 900
+vtx 0 5 0 0 1 1200 1400
+vtx 1 5 0 0 2 1400 1600
+vtx 2 5 0 0 3 1600 1800
+vtx 3 5 0 0 4 1800 2100
 vtx 4 0 0 0 0 900 900
 vtx 5 0 0 0 0 900 900
 vtx 6 0 0 0 0 900 900
@@ -799,8 +799,8 @@ set pwr_on_arm_grace = 5
 set enable_stick_arming = OFF
 set vtx_band = 4
 set vtx_channel = 4
-set vtx_power = 2
-set vtx_low_power_disarm = OFF
+set vtx_power = 1
+set vtx_low_power_disarm = UNTIL_FIRST_ARM
 set vtx_softserial_alt = OFF
 set vtx_freq = 5800
 set vtx_pit_mode_freq = 0
