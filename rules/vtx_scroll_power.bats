@@ -49,15 +49,20 @@ active_vtx_lines() {
     }
 }
 
-@test "VTX scroll: PIT mode bound to same AUX channel" {
+@test "VTX scroll: PIT mode aux binding (if present) is on same AUX channel" {
+    # PIT binding is optional — SmartAudio's runtime pit-mode toggle is flaky on
+    # many VTXes. vtx_low_power_disarm=UNTIL_FIRST_ARM is the reliable pre-arm
+    # safety net. This test only fires when a PIT aux line exists, to catch
+    # mismatched channels.
     local lines; lines=$(active_vtx_lines)
     [[ -n "$lines" ]] || skip "depends on: VTX scroll: rules configured"
-    local ch; ch=$(echo "$lines" | head -1 | awk '{print $3}')
     local pit; pit=$(mode_id "VTX PIT MODE")
-    grep -qE "^aux [0-9]+ ${pit} ${ch} " "$(dump)" || {
-        echo "expected: aux N ${pit} ${ch} ... (PIT on same AUX channel)"
-        echo -n "actual:   "
-        grep -E "^aux [0-9]+ ${pit} " "$(dump)" || echo "(no PIT mode aux line)"
+    local pit_line; pit_line=$(grep -E "^aux [0-9]+ ${pit} " "$(dump)" || true)
+    [[ -n "$pit_line" ]] || skip "no PIT mode aux line — relying on vtx_low_power_disarm"
+    local ch; ch=$(echo "$lines" | head -1 | awk '{print $3}')
+    [[ "$(echo "$pit_line" | awk '{print $4}')" == "$ch" ]] || {
+        echo "expected: PIT aux on channel ${ch} (matching vtx rules)"
+        echo "actual:   ${pit_line}"
         return 1
     }
 }

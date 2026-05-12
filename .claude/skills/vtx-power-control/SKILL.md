@@ -42,14 +42,21 @@ Decode the 32 bytes as 16 little-endian uint16 channels (channels 0–3 = AETR, 
 
 ### 5. Propose the mapping
 
-Show the user a table of zones → power levels before editing. Ask whether to bind VTX PIT MODE on the lowest zone (recommended for safety in the pits). Confirm PIT is supported by grepping `drones/<craft>/msp.json` for `VTX PIT MODE` in the decoded boxnames — definitive, since the FC firmware declares its mode list there. Use `mode_id "VTX PIT MODE"` via `rules/_helper.bash` to get the permanent ID for the `aux` line.
+Show the user a table of zones → power levels before editing. Then ask whether to bind VTX PIT MODE on the lowest zone.
 
-**Counting power zones:** if `vtxtable powervalues` ends in `0` (the SmartAudio PIT power index, paired with a `PIT` label), that last level isn't mapped to a `vtx` rule — PIT is bound via the `VTX PIT MODE` aux line and overrides whatever power the wheel is selecting. So you create `N-1` vtx rules covering powers `1..N-1`, plus one PIT aux binding. If the vtxtable has no PIT level (no trailing `0` in powervalues), create all `N` vtx rules. The `vtx_scroll_power.bats` rule check follows the same logic.
+**PIT mode caveat — flag this to the user.** Even when the FC firmware exposes `VTX PIT MODE` (mode ID via `mode_id "VTX PIT MODE"` in `rules/_helper.bash`) and the `vtxtable` ends with a `PIT` label (powervalue `0`, the SmartAudio convention), runtime PIT-toggling via an aux switch is historically unreliable on SmartAudio VTXes. SmartAudio v1/v2 only enters pit at power-on; even v2.1 has multiple open Betaflight issues where the aux toggle silently doesn't take effect mid-flight, or only works if the switch is in the pit position at FC boot. Don't assume "the mode exists in the FC" means "the toggle works live."
+
+Offer two paths:
+
+- **Skip PIT, rely on `vtx_low_power_disarm = UNTIL_FIRST_ARM`** (recommended unless live PIT-toggle is verified working on this specific VTX). The VTX stays at the lowest power until first arm regardless of wheel position — covers the pre-arm safety case without depending on the unreliable toggle. Map all power zones across the full input range.
+- **Bind PIT on the lowest zone** if the user has already confirmed live-toggle works on the same VTX hardware (e.g. via OSD or a successful prior test). Use `mode_id "VTX PIT MODE"` for the permanent ID.
+
+**Counting power zones:** if `vtxtable powervalues` ends in `0` (the SmartAudio PIT slot), there are `N-1` real power levels available regardless of which path you choose — that trailing slot is never mapped to a `vtx` rule. Create `N-1` vtx rules covering powers `1..N-1`. With "bind PIT": those rules cover the upper part of the input range and the PIT aux covers the lowest zone. With "skip PIT": the `N-1` rules span the full input range. If the vtxtable has no trailing `0`, create all `N` vtx rules across the full range.
 
 ### 6. Edit `drones/<craft>/diff.txt`
 
 Add:
-- One `aux <slot> <pit_mode_id> <aux_channel> <range_start> <range_end> 0 0` line for PIT, repurposing the first unused aux slot.
+- If binding PIT: one `aux <slot> <pit_mode_id> <aux_channel> <range_start> <range_end> 0 0` line, repurposing the first unused aux slot.
 - One `vtx <slot> <aux_channel> 0 0 <power> <range_start> <range_end>` per power zone, starting at `vtx 0`. `band = 0` and `channel = 0` mean "no change" — keep the FC's current band/channel. `power` is 1-indexed into the powervalues table (1 = lowest label).
 
 Shared boundaries between zones (e.g. `1500` ending one and starting the next) are fine — Betaflight evaluates rules in order and the last matching one wins.
@@ -68,10 +75,10 @@ After it reboots, sleep briefly then verify with:
 
 ```bash
 bfctl exec "vtx"
-bfctl exec "aux" | grep "^aux [0-9]\+ <pit_mode_id> "
+bfctl exec "aux" | grep "^aux [0-9]\+ <pit_mode_id> "   # only if PIT was bound
 ```
 
-`bfctl exec` leaves the FC in CLI mode — run `bfctl exec exit` to reboot it out before any subsequent MSP query.
+`bfctl exec` leaves the FC in CLI mode — run `bfctl exec exit` to reboot it out before any subsequent MSP query. The FC may take longer than a few seconds to re-enumerate after a restore + CLI-exit chain; if the next `make backup` or MSP call fails with "no Betaflight FC found", ask the user to unplug-replug rather than retrying in a loop.
 
 ### 9. Live test
 
@@ -87,7 +94,7 @@ After committing, `make test` runs `rules/vtx_scroll_power.bats` and `rules/vtx_
 - At least one active `vtx` rule
 - All rules on a single AUX channel
 - Powers 1..N map in ascending channel order
-- VTX PIT MODE is bound to the same AUX channel
+- If a PIT mode aux line is present, it's on the same AUX channel as the vtx rules (skipped when absent — PIT binding is optional)
 - `vtx_low_power_disarm = UNTIL_FIRST_ARM`
 
 If any of those fail, the rule output points to what's missing.
