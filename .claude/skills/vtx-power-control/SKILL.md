@@ -38,11 +38,13 @@ Don't trust the radio's labeling — different model profiles can remap. Verify 
 bfctl msp 105
 ```
 
-Decode the 32 bytes as 16 little-endian uint16 channels (channels 0–3 = AETR, 4+ = AUX1+). Note the current values, then ask the user to move the input (flip toggle to one extreme, or scroll wheel one way). Read again. The channel that changed is the one the radio sends — that's the `aux_channel` index for our `vtx`/`aux` lines (AUX1 = index 0, AUX6 = index 5).
+Decode the 32 bytes as 16 little-endian uint16 channels (channels 0–3 = AETR, 4+ = AUX1+). **The radio must be powered on before the first reading** — otherwise the FC returns its at-rest defaults, which won't line up with radio-on values and you won't be able to spot the change. Have the user power on the radio and hold the input at one extreme, take a reading, then move to the opposite extreme and take another. The channel that changed is the one the radio sends — that's the `aux_channel` index for our `vtx`/`aux` lines (AUX1 = index 0, AUX6 = index 5).
 
 ### 5. Propose the mapping
 
-Show the user a table of zones → power levels before editing. Ask whether to bind VTX PIT MODE on the lowest zone (recommended for safety in the pits). Use `mode_id "VTX PIT MODE"` via `rules/_helper.bash` conventions, or `bfctl exec "get vtx_pit_mode_freq"` to spot-check that PIT is supported — though every modern Betaflight build has it.
+Show the user a table of zones → power levels before editing. Ask whether to bind VTX PIT MODE on the lowest zone (recommended for safety in the pits). Confirm PIT is supported by grepping `drones/<craft>/msp.json` for `VTX PIT MODE` in the decoded boxnames — definitive, since the FC firmware declares its mode list there. Use `mode_id "VTX PIT MODE"` via `rules/_helper.bash` to get the permanent ID for the `aux` line.
+
+**Counting power zones:** if `vtxtable powervalues` ends in `0` (the SmartAudio PIT power index, paired with a `PIT` label), that last level isn't mapped to a `vtx` rule — PIT is bound via the `VTX PIT MODE` aux line and overrides whatever power the wheel is selecting. So you create `N-1` vtx rules covering powers `1..N-1`, plus one PIT aux binding. If the vtxtable has no PIT level (no trailing `0` in powervalues), create all `N` vtx rules. The `vtx_scroll_power.bats` rule check follows the same logic.
 
 ### 6. Edit `drones/<craft>/diff.txt`
 
