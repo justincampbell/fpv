@@ -12,10 +12,10 @@ MSP_CODES := 1 2 3 4 5 10 34 116 117 119
 
 .PHONY: help test \
         fc-ports fc-info fc-diff fc-msp fc-dump fc-diff-save fc-backup \
-        radio-backup
+        radio-backup t8l-backup
 
 help:
-	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z0-9_-]+:.*## /{printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 test: ## Run rules/*.bats against every drones/*/diff.txt
 	@command -v bats >/dev/null || { echo "bats not found. install: brew install bats-core"; exit 1; }
@@ -83,3 +83,8 @@ radio-backup: ## Copy radio configs from mounted SD card to radios/<name>/
 	find "$$dir/MODELS" "$$dir/RADIO" -type d -exec chmod 755 {} +; \
 	find "$$dir/MODELS" "$$dir/RADIO" -type f -exec chmod 644 {} +; \
 	echo "wrote $$dir/"
+
+t8l-backup: ## Pull T8L config over USB CDC (radio must be in M+power management mode)
+	@test -e /dev/cu.usbmodemRADIOMASTER1 || { \
+		echo "T8L not on USB. Hold M + power for 3s to enter management mode."; exit 1; }
+	@./scripts/t8l-backup.py

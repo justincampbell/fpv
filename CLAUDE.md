@@ -37,6 +37,14 @@ Optional, only when there's something to record:
 
 **Backing up the radio:** plug the radio in over USB in mass-storage mode and run `make radio-backup`. It auto-detects the SD card under `/Volumes/`, derives the radio name from `radio.yml`'s `board:` field, and rsyncs `MODELS/` + `RADIO/` + the two `edgetx.sdcard.*` identity files into `radios/<name>/`. Skips sounds/scripts/logs/screenshots/firmware/AppleDouble — the SD card is slow and those don't belong in git.
 
+**Backing up the Radiomaster T8L** is a separate path because the T8L is a screenless radio with no removable SD card and no EdgeTX-style USB mass storage. Its config lives in internal flash, only accessible via a custom Radiomaster protocol while the radio is in **M+power management mode** (hold M while pressing power for 3 s — the same combo used for firmware update). In runtime mode the T8L doesn't expose USB at all. Run `make t8l-backup` while in that mode; it shells out to `scripts/t8l-backup.py` (uv-run, PEP 723 inline deps so no manual venv) which pulls a ~1.1KB settings dump over `/dev/cu.usbmodemRADIOMASTER1` at 420000 baud and writes:
+- `radios/t8l/tx-settings.bin` — raw response, byte-stable between runs except for the live `Bad/Good` link counter; this is the canonical backup and the input for any future restore tool.
+- `radios/t8l/tx-settings.txt` — fully decoded human-readable view: every setting's name, type, value, default, range/options. Uses the firmware's own type table (UINT8 / TEXT_SELECTION / FOLDER / INFO / COMMAND / …) as decoded from the web configurator source.
+
+Protocol: request frames `A5 [subsys] [cmd] [...] 0D 0A` at 420000 baud. Subsystems `11`=TX-side, `22`=RX-side, `55`=channels. Response is a `0x56`-sentinel-prefixed packet wrapping chunked records (`[CRC] EA LEN MARKER EA EE [payload]` with marker `0x29` for device info, `0x2B` for a parameter). Multi-byte parameter records span several chunks with `seq` counting down to 0. Full byte-level breakdown lives in the docstring of `scripts/t8l-backup.py`, reverse-engineered from `radiomaster-rc/RM-Web-Page` (https://radiomaster-rc.github.io/RM-Web-Page/Connection.html).
+
+Caveats baked into the decoder: `Bad/Good` is marked `(live)` because it drifts between dumps; Pitmode option names are cosmetically substituted (`\xc0` → `↓`, `\xc1` → `↑`) — protocol-wise those are raw bytes. The `.bin` is the source of truth; the `.txt` is the diff target.
+
 **Editing a config with Claude's help:** ask Claude to modify `drones/<craft>/diff.txt` directly. The file is line-oriented and idempotent (`set key = value`, etc.), so Claude can read, propose, and edit in place. `dump.txt` is the full reference (incl. defaults); don't hand-edit it — it's regenerated each backup.
 
 **Applying one change to all drones:** describe the change. Claude edits every relevant `drones/*/diff.txt` in one pass. Commit message should describe the *intent* ("raise vbat warning to 3.5V"), not the line-level diff.
