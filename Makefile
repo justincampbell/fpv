@@ -10,12 +10,15 @@ MSP_CODES := 1 2 3 4 5 10 34 116 117 119
 # diff/dump leave the FC in CLI mode, blocking subsequent MSP queries).
 .NOTPARALLEL:
 
-.PHONY: help test \
+.PHONY: help test switches \
         fc-ports fc-info fc-diff fc-msp fc-dump fc-diff-save fc-backup \
         radio-backup t8l-backup
 
 help:
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z0-9_-]+:.*## /{printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+switches: ## Print cross-drone switch table (drones × switches) as markdown
+	@bin/switches
 
 test: ## Run rules/*.bats against every drones/*/diff.txt
 	@command -v bats >/dev/null || { echo "bats not found. install: brew install bats-core"; exit 1; }

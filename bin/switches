@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# Print a cross-drone switch table as a fixed-width markdown table: drones
+# as rows, switches as columns, modes as cells (comma-separated when
+# multiple bindings share a switch). Columns with no bindings across the
+# selected drones are suppressed.
+#
+# Reads radios/pocket/MODELS/model01.yml for the source↔channel mapping,
+# drones/*/dump.txt for aux + vtx bindings, drones/*/msp.json for mode
+# names. Pocket "P1" is what the radio yaml calls the scroll wheel that's
+# labeled "S1" on the device — kept as P1 because that's what EdgeTX uses.
+#
+# Usage: bin/switches [craft ...]
+#   No craft args = all drones.
+
+set -euo pipefail
+
+repo=$(cd "$(dirname "$0")/.." && pwd)
+# shellcheck source=../rules/_helper.bash
+source "$repo/rules/_helper.bash"
+
+while (( $# > 0 )); do
+    case "$1" in
+        -h|--help)
+            cat <<'EOF'
+Print a cross-drone switch table (drones × switches) as markdown.
+
+Usage: bin/switches [craft ...]
+  No craft args = all drones.
+EOF
+            exit 0 ;;
+        --) shift; break ;;
+        -*) echo "unknown flag: $1" >&2; exit 1 ;;
+        *) break ;;
+    esac
+done
+
+COL_ORDER=(SA SB SC SD SE P1)
+
+drones=()
+if (( $# == 0 )); then
+    for d in "$repo"/drones/*/; do drones+=("$(basename "$d")"); done
+else
+    for craft in "$@"; do
+        [[ -d "$repo/drones/$craft" ]] || { echo "no drone '$craft'" >&2; exit 1; }
+        drones+=("$craft")
+    done
+fi
+
+emit_bindings() {
+    for drone in "${drones[@]}"; do
+        local dump="$repo/drones/$drone/dump.txt"
+        [[ -f "$dump" ]] || continue
+        export CONFIG="$repo/drones/$drone/diff.txt"
+
+        # aux mode bindings: aux <slot> <mode_id> <ch> <start> <end> ...
+        while IFS= read -r line; do
+            local _kw _slot mid ch rs re _logic _link
+            read -r _kw _slot mid ch rs re _logic _link <<<"$line"
+            [[ "$rs" == "900" && "$re" == "900" ]] && continue
+            (( ch >= 0 && ch <= 5 )) || continue
+            local sw mode
+            sw=$(pocket_source "$ch")
+            [[ -n "$sw" ]] || continue
+            mode=$(mode_name "$mid")
+            [[ -n "$mode" ]] || mode="?id=$mid"
+            printf "%s|%s|%s\n" "$drone" "$sw" "$mode"
+        done < <(grep -E "^aux " "$dump" || true)
+
+        # Dynamic VTX power: multiple `vtx N <band> <ch> ...` lines bind
+        # power levels to ranges on one aux channel. Collapse to a single
+        # "VTX power (N)" entry where N is the level count.
+        local active_vtx vtx_count vtx_ch vtx_sw
+        active_vtx=$(grep -E "^vtx " "$dump" | grep -vE " 0 0 0 900 900$" || true)
+        if [[ -n "$active_vtx" ]]; then
+            vtx_count=$(echo "$active_vtx" | wc -l | tr -d ' ')
+            vtx_ch=$(echo "$active_vtx" | head -1 | awk '{print $3}')
+            vtx_sw=$(pocket_source "$vtx_ch")
+            if [[ -n "$vtx_sw" ]]; then
+                printf "%s|%s|VTX power (%s)\n" "$drone" "$vtx_sw" "$vtx_count"
+            fi
+        fi
+    done
+}
+
+# Aggregate bindings and emit a fixed-width markdown table. Mode names are
+# ASCII so byte length == visual width.
+col_csv=$(IFS=,; echo "${COL_ORDER[*]}")
+drone_csv=$(IFS=,; echo "${drones[*]}")
+emit_bindings | awk -F'|' \
+    -v col_csv="$col_csv" \
+    -v drone_csv="$drone_csv" '
+function pad(s, w) { return s sprintf("%*s", w - length(s), "") }
+function dashes(n,   out) { out = ""; while (n-- > 0) out = out "-"; return out }
+BEGIN {
+    n_cols = split(col_csv, col_order, ",")
+    n_drones = split(drone_csv, drone_order, ",")
+}
+{
+    key = $1 SUBSEP $2
+    cells[key] = (key in cells) ? cells[key] ", " $3 : $3
+    used[$2] = 1
+}
+END {
+    n_active = 0
+    for (i = 1; i <= n_cols; i++)
+        if (used[col_order[i]]) active[++n_active] = col_order[i]
+
+    drone_w = length("Drone")
+    for (d = 1; d <= n_drones; d++)
+        if (length(drone_order[d]) > drone_w) drone_w = length(drone_order[d])
+    for (i = 1; i <= n_active; i++) {
+        col_w[i] = length(active[i])
+        for (d = 1; d <= n_drones; d++) {
+            v = cells[drone_order[d] SUBSEP active[i]]
+            if (!v) v = "-"
+            if (length(v) > col_w[i]) col_w[i] = length(v)
+        }
+    }
+    printf "| %s ", pad("Drone", drone_w)
+    for (i = 1; i <= n_active; i++) printf "| %s ", pad(active[i], col_w[i])
+    print "|"
+    printf "|%s", dashes(drone_w + 2)
+    for (i = 1; i <= n_active; i++) printf "|%s", dashes(col_w[i] + 2)
+    print "|"
+    for (d = 1; d <= n_drones; d++) {
+        printf "| %s ", pad(drone_order[d], drone_w)
+        for (i = 1; i <= n_active; i++) {
+            v = cells[drone_order[d] SUBSEP active[i]]
+            if (!v) v = "-"
+            printf "| %s ", pad(v, col_w[i])
+        }
+        print "|"
+    }
+}
+'

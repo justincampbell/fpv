@@ -87,3 +87,68 @@ mode_id() {
         if $i == null then "ERR" else $ids[$i] end
     ' "$msp"
 }
+
+# Reverse of mode_id — name for a permanent ID. Empty if the ID isn't in
+# this FC's BOXNAMES (e.g. mode disabled in firmware). Use to render aux
+# bindings in human-readable form (failure messages, switch tables).
+mode_name() {
+    local id="$1"
+    local msp="$(dirname "$CONFIG")/msp.json"
+    jq -r --arg id "$id" '
+        (.[] | select(.code == 116) | .decoded | split(", ")) as $names |
+        (.[] | select(.code == 119) | .decoded | split(" ") | map(tonumber)) as $ids |
+        ($ids | index($id|tonumber)) as $i |
+        if $i == null then "" else $names[$i] end
+    ' "$msp"
+}
+
+# Path to the Pocket "FPV DRONE" model file. Hardcoded to model01 because
+# that's the model that flies these drones; the other slots are templates.
+# Uses BASH_SOURCE so the helper works from anywhere (bats, bin/switches,
+# ad-hoc shell) — no $CONFIG dependency.
+_pocket_model() {
+    local repo; repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+    echo "$repo/radios/pocket/MODELS/model01.yml"
+}
+
+# Look up the Betaflight aux-channel index (0=AUX1 ... 5=AUX6) bound to a
+# Pocket source ("SA"–"SE", "P1") in the FPV model. Use in `aux` rules to
+# express "BEEPER on SE" instead of hardcoding channel 4 — if the radio is
+# remapped, the rule reads the new value automatically.
+#
+# EdgeTX destCh is 0-indexed across all 16 channels (CH1=0, CH5=4, ...);
+# BF aux uses 0=AUX1, 1=AUX2, ... — so the conversion is destCh - 4.
+pocket_channel() {
+    local src="$1" model dest
+    model=$(_pocket_model)
+    [[ -f "$model" ]] || { echo "pocket_channel: $model not found" >&2; return 1; }
+    dest=$(awk -v want="$src" '
+        { sub(/\r$/, "") }
+        /^mixData:/          { inmix=1; next }
+        inmix && /^[a-zA-Z]/ { exit }
+        inmix && /^ -[ \t]*$/ { d=""; s="" }
+        inmix && /destCh:/   { d=$2 }
+        inmix && /srcRaw:/   { gsub(/"/, "", $2); s=$2 }
+        inmix && s == want && d != "" { print d; exit }
+    ' "$model")
+    [[ -n "$dest" ]] || { echo "pocket_channel: '$src' not bound in model01" >&2; return 1; }
+    echo $((dest - 4))
+}
+
+# Reverse direction — friendly label ("SA"–"SE", "P1") for a BF aux channel.
+# Empty if the channel isn't bound in the Pocket FPV model. Use in failure
+# messages so an unexpected channel names itself.
+pocket_source() {
+    local ch="$1" model dest=$(( $1 + 4 ))
+    model=$(_pocket_model)
+    [[ -f "$model" ]] || return 0
+    awk -v want="$dest" '
+        { sub(/\r$/, "") }
+        /^mixData:/          { inmix=1; next }
+        inmix && /^[a-zA-Z]/ { exit }
+        inmix && /^ -[ \t]*$/ { d=""; s="" }
+        inmix && /destCh:/   { d=$2 }
+        inmix && /srcRaw:/   { gsub(/"/, "", $2); s=$2 }
+        inmix && d == want && s != "" { print s; exit }
+    ' "$model"
+}

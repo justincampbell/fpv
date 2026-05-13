@@ -27,6 +27,7 @@ Source files on the FAT32 SD card use CRLF line endings — preserved as-is in t
 
 - `Makefile` — automation around `bfctl`, `rsync`, and `bats`.
 - `rules/` — bats files that lint each `diff.txt`. See [Tests](#tests).
+- `bin/` — small utilities reused by Make targets and ad-hoc shell. Currently just `bin/switches` (cross-drone switch table: drones × switch positions; see `make switches`).
 
 Optional, only when there's something to record:
 - `drones/<craft>/<craft>.md` — build notes, hardware, rationale.
@@ -82,6 +83,9 @@ Each rule is a `.bats` file. The Makefile loops over the configs and invokes bat
 - `craft` — returns the lowercase craft slug (e.g. `air65`), useful for per-drone branching inside a rule
 - `dump` — returns the path to the drone's `dump.txt`. Use in `aux` rules: `diff.txt` only contains lines that *differ* from the board defaults, so a board that ships ANGLE on AUX2 (e.g. LIONBEE_V1) won't have it in the diff at all. `dump.txt` always shows the full effective config.
 - `mode_id <name>` — returns the permanent mode ID for a name (e.g. `mode_id BEEPER` → `13`, `mode_id "FLIP OVER AFTER CRASH"` → `35`). Reads `msp.json`. Always use this in `aux` rules instead of hardcoding the integer — names are stable and self-documenting; permanent IDs aren't surfaced in Configurator.
+- `mode_name <id>` — reverse of `mode_id`. Empty for IDs not in this FC's BOXNAMES. Use to render bindings in human-readable form (failure messages, switch tables).
+- `pocket_channel <source>` — returns the BF aux-channel index (0=AUX1 … 5=AUX6) bound to a Pocket source (`SA`–`SE`, `P1`) in `radios/pocket/MODELS/model01.yml`. Use in `aux` rules to express "BEEPER on SE" instead of hardcoding `4` — if the radio remaps a switch, the rule reads the new value automatically. Standalone (no `$CONFIG` dependency) so callers outside bats can use it too.
+- `pocket_source <channel>` — reverse of `pocket_channel`. Returns `SA`/`SB`/…/`P1` or empty. Use in failure messages so an unexpected channel names itself.
 
 **Adding a rule:** drop a new `<thing>.bats` into `rules/`, `load _helper`, write one or more `@test` blocks. Keep the test name human-readable — it's what shows in the checklist.
 

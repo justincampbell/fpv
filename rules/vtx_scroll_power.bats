@@ -31,6 +31,18 @@ active_vtx_lines() {
     }
 }
 
+@test "VTX scroll: bound to P1 (scroll wheel)" {
+    local lines; lines=$(active_vtx_lines)
+    [[ -n "$lines" ]] || skip "depends on: VTX scroll: rules configured"
+    local ch; ch=$(echo "$lines" | head -1 | awk '{print $3}')
+    local expected; expected=$(pocket_channel P1)
+    [[ "$ch" == "$expected" ]] || {
+        echo "expected: VTX rules on channel ${expected} (P1 scroll wheel)"
+        echo "actual:   channel ${ch} ($(pocket_source "$ch"))"
+        return 1
+    }
+}
+
 @test "VTX scroll: powers 1..N map in ascending channel order" {
     local lines; lines=$(active_vtx_lines)
     [[ -n "$lines" ]] || skip "depends on: VTX scroll: rules configured"
