@@ -84,7 +84,7 @@ radio-backup: ## Copy radio configs from mounted SD card to radios/<name>/
 	find "$$dir/MODELS" "$$dir/RADIO" -type f -exec chmod 644 {} +; \
 	echo "wrote $$dir/"
 
-t8l-backup: ## Pull T8L config over USB CDC (radio must be in M+power management mode)
-	@test -e /dev/cu.usbmodemRADIOMASTER1 || { \
-		echo "T8L not on USB. Hold M + power for 3s to enter management mode."; exit 1; }
-	@./scripts/t8l-backup.py
+t8l-backup: ## Pull T8L config over USB (radio must be in M+power management mode)
+	@command -v rmt8l >/dev/null || { \
+		echo "rmt8l not installed. See https://github.com/justincampbell/rmt8l"; exit 1; }
+	@rmt8l backup --out-dir radios/t8l

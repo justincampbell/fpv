@@ -174,7 +174,7 @@ settings:
 
   - id: 19  parent: 00  type: info (live)
     name: Bad/Good
-    value:   0/257
+    value:   0/258
 
   - id: 20  parent: 00  type: info
     name: master ISM2G4
