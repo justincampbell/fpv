@@ -6,10 +6,16 @@ CONFIGS := $(wildcard drones/*/diff.txt)
 # ranges as the FC sees them). Telemetry codes are deliberately excluded.
 MSP_CODES := 1 2 3 4 5 10 34 116 117 119
 
-.PHONY: help backup info ports diff test msp
+# Prerequisites are serialized: MSP must precede any CLI-mode op (bfctl
+# diff/dump leave the FC in CLI mode, blocking subsequent MSP queries).
+.NOTPARALLEL:
+
+.PHONY: help test \
+        fc-ports fc-info fc-diff fc-msp fc-dump fc-diff-save fc-backup \
+        radio-backup
 
 help:
-	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-10s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 test: ## Run rules/*.bats against every drones/*/diff.txt
 	@command -v bats >/dev/null || { echo "bats not found. install: brew install bats-core"; exit 1; }
@@ -21,31 +27,59 @@ test: ## Run rules/*.bats against every drones/*/diff.txt
 	done; \
 	exit $$status
 
-ports: ## List connected Betaflight FCs
+# === FC (Betaflight flight controller, over USB) ===
+
+fc-ports: ## List connected Betaflight FCs
 	@$(BFCTL) ports
 
-info: ## Print connected FC's metadata
+fc-info: ## Print connected FC's metadata
 	@$(BFCTL) info
 
-backup: ## Pull MSP snapshot + diff + dump from connected FC into drones/<craft>/
+fc-diff: ## Diff connected FC vs. its tracked diff.txt
 	@craft=$$($(BFCTL) craft) || exit; \
-	dir="drones/$$craft"; \
-	mkdir -p "$$dir"; \
-	$(BFCTL) msp --json $(MSP_CODES) > "$$dir/msp.json"; \
-	echo "wrote $$dir/msp.json"; \
-	$(BFCTL) backup -out "$$dir/diff.txt" >/dev/null; \
-	echo "wrote $$dir/diff.txt"; \
-	$(BFCTL) dump > "$$dir/dump.txt"; \
-	echo "wrote $$dir/dump.txt"
+	test -f "drones/$$craft/diff.txt" || { echo "no tracked file for $$craft"; exit 1; }; \
+	$(BFCTL) diff | diff -u "drones/$$craft/diff.txt" - || true
 
-msp: ## Save selected MSP codes to drones/<craft>/msp.json
+fc-msp: ## Write drones/<craft>/msp.json from connected FC
 	@craft=$$($(BFCTL) craft) || exit; \
 	dir="drones/$$craft"; \
 	mkdir -p "$$dir"; \
 	$(BFCTL) msp --json $(MSP_CODES) > "$$dir/msp.json"; \
 	echo "wrote $$dir/msp.json"
 
-diff: ## Diff connected FC vs. its tracked file
+fc-diff-save: ## Write drones/<craft>/diff.txt from connected FC
 	@craft=$$($(BFCTL) craft) || exit; \
-	test -f "drones/$$craft/diff.txt" || { echo "no tracked file for $$craft"; exit 1; }; \
-	$(BFCTL) diff | diff -u "drones/$$craft/diff.txt" - || true
+	dir="drones/$$craft"; \
+	mkdir -p "$$dir"; \
+	$(BFCTL) backup -out "$$dir/diff.txt" >/dev/null; \
+	echo "wrote $$dir/diff.txt"
+
+fc-dump: ## Write drones/<craft>/dump.txt from connected FC
+	@craft=$$($(BFCTL) craft) || exit; \
+	dir="drones/$$craft"; \
+	mkdir -p "$$dir"; \
+	$(BFCTL) dump > "$$dir/dump.txt"; \
+	echo "wrote $$dir/dump.txt"
+
+fc-backup: fc-msp fc-dump fc-diff-save ## Pull MSP + dump + diff from connected FC
+
+# === Radio (EdgeTX transmitter, over USB mass storage) ===
+
+radio-backup: ## Copy radio configs from mounted SD card to radios/<name>/
+	@set -e; \
+	sd=""; for v in /Volumes/*; do \
+		test -f "$$v/edgetx.sdcard.target" && sd="$$v" && break; \
+	done; \
+	test -n "$$sd" || { echo "no EdgeTX SD card mounted under /Volumes/"; exit 1; }; \
+	name=$$(awk '/^board:/{print $$2; exit}' "$$sd/RADIO/radio.yml" | tr -d '\r'); \
+	test -n "$$name" || { echo "could not derive radio name from $$sd/RADIO/radio.yml"; exit 1; }; \
+	dir="radios/$$name"; \
+	mkdir -p "$$dir"; \
+	rsync -rt --delete --exclude='._*' --exclude='README.txt' \
+		"$$sd/MODELS/" "$$dir/MODELS/"; \
+	rsync -rt --delete --exclude='._*' --exclude='README.txt' \
+		"$$sd/RADIO/" "$$dir/RADIO/"; \
+	install -m 644 "$$sd/edgetx.sdcard.target" "$$sd/edgetx.sdcard.version" "$$dir/"; \
+	find "$$dir/MODELS" "$$dir/RADIO" -type d -exec chmod 755 {} +; \
+	find "$$dir/MODELS" "$$dir/RADIO" -type f -exec chmod 644 {} +; \
+	echo "wrote $$dir/"
