@@ -66,6 +66,18 @@ emit_bindings() {
             printf "%s|%s|%s\n" "$drone" "$sw" "$mode"
         done < <(grep -E "^aux " "$dump" || true)
 
+        # adjrange bindings: surface only the RATE_PROFILE function (12).
+        # Format: adjrange <slot> <adj_idx> <range_ch> <rs> <re> <func> <aux_ch> <center> <scale>
+        while IFS= read -r line; do
+            local _kw _slot _adj rch rs re func ach _ctr _scl
+            read -r _kw _slot _adj rch rs re func ach _ctr _scl <<<"$line"
+            [[ "$func" == "12" ]] || continue
+            (( ach >= 0 && ach <= 5 )) || continue
+            local sw; sw=$(pocket_source "$ach")
+            [[ -n "$sw" ]] || continue
+            printf "%s|%s|RATE PROFILE\n" "$drone" "$sw"
+        done < <(grep -E "^adjrange " "$dump" || true)
+
         # Dynamic VTX power: multiple `vtx N <band> <ch> ...` lines bind
         # power levels to ranges on one aux channel. Collapse to a single
         # "VTX power (N)" entry where N is the level count.
