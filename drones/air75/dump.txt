@@ -353,7 +353,7 @@ aux 18 0 0 900 900 0 0
 aux 19 0 0 900 900 0 0
 
 # adjrange
-adjrange 0 0 0 900 900 0 0 0 0
+adjrange 0 0 2 900 2100 12 2 0 0
 adjrange 1 0 0 900 900 0 0 0 0
 adjrange 2 0 0 900 900 0 0 0 0
 adjrange 3 0 0 900 900 0 0 0 0
@@ -516,7 +516,7 @@ set blackbox_high_resolution = OFF
 set max_throttle = 2000
 set min_command = 1000
 set motor_kv = 1960
-set motor_idle = 550
+set motor_idle = 850
 set dshot_burst = OFF
 set dshot_bidir = ON
 set dshot_edt = OFF
@@ -1379,7 +1379,7 @@ profile 0
 rateprofile 0
 
 # rateprofile 0
-set rateprofile_name = -
+set rateprofile_name = Default
 set thr_mid = 25
 set thr_expo = 45
 set thr_hover = 16
@@ -1394,7 +1394,7 @@ set yaw_expo = 0
 set roll_srate = 58
 set pitch_srate = 58
 set yaw_srate = 50
-set throttle_limit_type = OFF
+set throttle_limit_type = SCALE
 set throttle_limit_percent = 100
 set roll_rate_limit = 1998
 set pitch_rate_limit = 1998
@@ -1403,10 +1403,10 @@ set yaw_rate_limit = 1998
 rateprofile 1
 
 # rateprofile 1
-set rateprofile_name = -
-set thr_mid = 50
-set thr_expo = 0
-set thr_hover = 50
+set rateprofile_name = Medium
+set thr_mid = 25
+set thr_expo = 45
+set thr_hover = 16
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
 set roll_rc_rate = 7
@@ -1415,11 +1415,11 @@ set yaw_rc_rate = 7
 set roll_expo = 0
 set pitch_expo = 0
 set yaw_expo = 0
-set roll_srate = 67
-set pitch_srate = 67
-set yaw_srate = 67
-set throttle_limit_type = OFF
-set throttle_limit_percent = 100
+set roll_srate = 58
+set pitch_srate = 58
+set yaw_srate = 50
+set throttle_limit_type = SCALE
+set throttle_limit_percent = 75
 set roll_rate_limit = 1998
 set pitch_rate_limit = 1998
 set yaw_rate_limit = 1998
@@ -1427,10 +1427,10 @@ set yaw_rate_limit = 1998
 rateprofile 2
 
 # rateprofile 2
-set rateprofile_name = -
-set thr_mid = 50
-set thr_expo = 0
-set thr_hover = 50
+set rateprofile_name = Slow
+set thr_mid = 25
+set thr_expo = 45
+set thr_hover = 16
 set rates_type = ACTUAL
 set quickrates_rc_expo = OFF
 set roll_rc_rate = 7
@@ -1439,11 +1439,11 @@ set yaw_rc_rate = 7
 set roll_expo = 0
 set pitch_expo = 0
 set yaw_expo = 0
-set roll_srate = 67
-set pitch_srate = 67
-set yaw_srate = 67
-set throttle_limit_type = OFF
-set throttle_limit_percent = 100
+set roll_srate = 58
+set pitch_srate = 58
+set yaw_srate = 50
+set throttle_limit_type = SCALE
+set throttle_limit_percent = 50
 set roll_rate_limit = 1998
 set pitch_rate_limit = 1998
 set yaw_rate_limit = 1998

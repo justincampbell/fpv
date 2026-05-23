@@ -35,3 +35,30 @@ load _helper
         return 1
     }
 }
+
+# Extract rateprofile N's setting block from dump.txt — just the `set` lines,
+# stripping the header and the `# rateprofile N` comment so the comparison is
+# value-only. Empty when the profile is at all-defaults.
+_rateprofile_block() {
+    awk -v n="$1" '
+        $0 == "rateprofile " n { in_sec = 1; next }
+        in_sec && /^rateprofile [0-9]+$/ { exit }
+        in_sec && /^set / { print }
+    ' "$(dump)"
+}
+
+@test "rateprofile 0, 1, 2 are all distinct" {
+    case "$(craft)" in
+        grinderino35) skip "no Pocket bindings configured" ;;
+    esac
+    local p0 p1 p2; p0=$(_rateprofile_block 0); p1=$(_rateprofile_block 1); p2=$(_rateprofile_block 2)
+    local dup=""
+    [[ "$p0" == "$p1" ]] && dup="${dup}rateprofile 0 == rateprofile 1\n"
+    [[ "$p0" == "$p2" ]] && dup="${dup}rateprofile 0 == rateprofile 2\n"
+    [[ "$p1" == "$p2" ]] && dup="${dup}rateprofile 1 == rateprofile 2\n"
+    [[ -z "$dup" ]] || {
+        echo "expected: rateprofile 0, 1, 2 differ from each other (SC has 3 positions)"
+        echo -e "actual:   ${dup%\\n}"
+        return 1
+    }
+}
